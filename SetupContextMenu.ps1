@@ -64,8 +64,7 @@ if($uninstall) {
 [void](New-Item -Path $runAsPath -ItemType Directory)
 [void](Copy-Item -Path "$PSScriptRoot\icons\*.ico" -Destination $iconPath)
 [void](Copy-Item -Path "$PSScriptRoot\run-as\*.exe" -Destination $runAsPath)
-Write-Output "Copy icons => $resourcePath"
-Write-Output "Copy run-as => $resourcePath"
+Write-Output "Copy content => $resourcePath"
 
 # Load the custom config
 if((Test-Path -Path $customConfigPath)) {
