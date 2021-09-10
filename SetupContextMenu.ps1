@@ -5,7 +5,9 @@ Param(
 # Global definitions
 $wtProfilesPath = "$env:LocalAppData\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
 $customConfigPath = "$PSScriptRoot\config.json"
-$resourcePath = "$env:LOCALAPPDATA\WindowsTerminalContextIcons\"
+$resourcePath = "$env:LOCALAPPDATA\WindowsTerminalContext"
+$iconPath = "$resourcePath\icons"
+$runAsPath = "$resourcePath\run-as"
 $contextMenuIcoName = "terminal.ico"
 $cmdIcoFileName = "cmd.ico"
 $wslIcoFileName = "linux.ico"
@@ -49,7 +51,7 @@ if((Test-Path -Path $subMenuRegRoot)) {
 
 if((Test-Path -Path $resourcePath)) {
     Remove-Item -Recurse -Force -Path $resourcePath
-    Write-Host "Clear icon content folder $resourcePath"
+    Write-Host "Clear content folder $resourcePath"
 }
 
 if($uninstall) {
@@ -58,8 +60,12 @@ if($uninstall) {
 
 # Setup icons
 [void](New-Item -Path $resourcePath -ItemType Directory)
-[void](Copy-Item -Path "$PSScriptRoot\icons\*.ico" -Destination $resourcePath)
+[void](New-Item -Path $iconPath -ItemType Directory)
+[void](New-Item -Path $runAsPath -ItemType Directory)
+[void](Copy-Item -Path "$PSScriptRoot\icons\*.ico" -Destination $iconPath)
+[void](Copy-Item -Path "$PSScriptRoot\run-as\*.exe" -Destination $runAsPath)
 Write-Output "Copy icons => $resourcePath"
+Write-Output "Copy run-as => $resourcePath"
 
 # Load the custom config
 if((Test-Path -Path $customConfigPath)) {
@@ -70,7 +76,7 @@ if((Test-Path -Path $customConfigPath)) {
 # Setup First layer context menu
 [void](New-Item -Force -Path $contextMenuRegPath)
 [void](New-ItemProperty -Path $contextMenuRegPath -Name ExtendedSubCommandsKey -PropertyType String -Value $subMenuRegRelativePath)
-[void](New-ItemProperty -Path $contextMenuRegPath -Name Icon -PropertyType String -Value $resourcePath$contextMenuIcoName)
+[void](New-ItemProperty -Path $contextMenuRegPath -Name Icon -PropertyType String -Value $iconPath\$contextMenuIcoName)
 [void](New-ItemProperty -Path $contextMenuRegPath -Name MUIVerb -PropertyType String -Value $contextMenuLabel)
 if($config.global.extended) {
     [void](New-ItemProperty -Path $contextMenuRegPath -Name Extended -PropertyType String)
@@ -79,7 +85,7 @@ Write-Host "Add top layer menu (shell) => $contextMenuRegPath"
 
 [void](New-Item -Force -Path $contextBGMenuRegPath)
 [void](New-ItemProperty -Path $contextBGMenuRegPath -Name ExtendedSubCommandsKey -PropertyType String -Value $subMenuRegRelativePath)
-[void](New-ItemProperty -Path $contextBGMenuRegPath -Name Icon -PropertyType String -Value $resourcePath$contextMenuIcoName)
+[void](New-ItemProperty -Path $contextBGMenuRegPath -Name Icon -PropertyType String -Value $iconPath\$contextMenuIcoName)
 [void](New-ItemProperty -Path $contextBGMenuRegPath -Name MUIVerb -PropertyType String -Value $contextMenuLabel)
 if($config.global.extended) {
     [void](New-ItemProperty -Path $contextBGMenuRegPath -Name Extended -PropertyType String)
@@ -142,12 +148,12 @@ $profiles | ForEach-Object {
         $labelAdmin_f = "$label_f (Admin)"
         
         $command_f = "`"$env:LOCALAPPDATA\Microsoft\WindowsApps\wt.exe`" -p `"$profileName`" -d `"%V\.`""
-        $commandAdmin_f = "powershell -WindowStyle hidden -Command `"Start-Process powershell -WindowStyle hidden -Verb RunAs -ArgumentList `"`"`"`"-Command $env:LOCALAPPDATA\Microsoft\WindowsApps\wt.exe -p '$profileName' -d '%V\.'`"`"`"`""
+        $commandAdmin_f = "`"$runAsPath\run-as.exe`" `"$env:LOCALAPPDATA\Microsoft\WindowsApps\wt.exe`" -p `"$profileName`" -d `"%V\.`""
         
         if($configEntry.icon){
             $useFullPath = [System.IO.Path]::IsPathRooted($configEntry.icon);
             $tmpIconPath = $configEntry.icon;            
-            $icoPath = If (!$useFullPath) {"$resourcePath$tmpIconPath"} Else { "$tmpIconPath" }
+            $icoPath = If (!$useFullPath) {"$iconPath\$tmpIconPath"} Else { "$tmpIconPath" }
         }
         elseif ($_.icon) {
             $icoPath = $_.icon
@@ -173,7 +179,7 @@ $profiles | ForEach-Object {
         }
 
         if($icoPath -ne "") {
-            $iconPath_f = If ($configEntry.icon -or $_.icon) { "$icoPath" } Else { "$resourcePath$icoPath" }
+            $iconPath_f = If ($configEntry.icon -or $_.icon) { "$icoPath" } Else { "$iconPath\$icoPath" }
         }
 
         Write-Host "Add new entry $profileName => $subItemRegPath"
